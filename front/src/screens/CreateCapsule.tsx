@@ -8,9 +8,9 @@ import { ThemedCard, ThemedButton, ThemedText, ThemedTextInput } from "../compon
 import { FadeInView, SlideInView } from "../components/ui/AnimatedComponents"
 import { LoadingSpinner } from "../components/ui/LoadingSpinner"
 import { capsuleService } from "../services/api"
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 
-const CreateCapsule = () => {
+function CreateCapsule() {
   const navigation = useNavigation()
   const { theme, isDark } = useTheme()
 
@@ -43,9 +43,19 @@ const CreateCapsule = () => {
   }
 
   const handleSelectImage = async () => {
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
-    if (result.assets && result.assets.length > 0) {
-      setSelectedImage(result.assets[0].uri);
+    // Solicita permissão
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permissão necessária', 'É preciso permitir acesso à galeria para escolher uma imagem.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+    })
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setSelectedImage(result.assets[0].uri)
     }
   }
 
@@ -67,17 +77,17 @@ const CreateCapsule = () => {
     setIsLoading(true)
 
     try {
-      const formData = new FormData();
-      formData.append('titulo', title.trim());
-      formData.append('conteudo', message.trim());
-      formData.append('dataAbertura', selectedDate.toISOString());
-      formData.append('categoria', category);
+      const formData = new FormData()
+      formData.append('titulo', title.trim())
+      formData.append('conteudo', message.trim())
+      formData.append('dataAbertura', selectedDate.toISOString())
+      formData.append('categoria', category)
       if (selectedImage) {
         formData.append('files', {
           uri: selectedImage,
           name: 'imagem.jpg',
           type: 'image/jpeg',
-        } as any);
+        } as any)
       }
 
       // Enviar para a API
@@ -91,7 +101,7 @@ const CreateCapsule = () => {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
-        ],
+        ]
       )
     } catch (error) {
       console.error("Erro ao criar cápsula:", error)
@@ -137,8 +147,7 @@ const CreateCapsule = () => {
                   value={title}
                   onChangeText={setTitle}
                   placeholder="Ex: Carta para mim em 2025"
-                  style={styles.input}
-                />
+                  style={styles.input} />
               </View>
 
               {/* Categoria */}
@@ -155,6 +164,7 @@ const CreateCapsule = () => {
                         {
                           backgroundColor: category === cat.id ? cat.color : theme.colors.surface,
                           borderColor: cat.color,
+                          borderWidth: category === cat.id ? 2 : 1,
                         },
                       ]}
                       onPress={() => setCategory(cat.id)}
@@ -166,7 +176,7 @@ const CreateCapsule = () => {
                           fontWeight: category === cat.id ? "600" : "normal",
                         }}
                       >
-                        {cat.label}
+                        {cat.label} {category === cat.id ? "✔️" : ""}
                       </ThemedText>
                     </TouchableOpacity>
                   ))}
@@ -184,8 +194,7 @@ const CreateCapsule = () => {
                   placeholder="Escreva sua mensagem para o futuro..."
                   multiline
                   numberOfLines={6}
-                  style={styles.textArea}
-                />
+                  style={styles.textArea} />
               </View>
 
               {/* Data de Abertura */}
@@ -197,8 +206,7 @@ const CreateCapsule = () => {
                   value={openDate}
                   onChangeText={setOpenDate}
                   placeholder="YYYY-MM-DD (Ex: 2025-12-31)"
-                  style={styles.input}
-                />
+                  style={styles.input} />
 
                 {/* Datas Rápidas */}
                 <View style={styles.quickDatesContainer}>
@@ -248,6 +256,9 @@ const CreateCapsule = () => {
                     </ThemedText>
                   </TouchableOpacity>
                 )}
+                <ThemedText variant="caption" color="textSecondary" style={styles.hint}>
+                  Imagem será enviada junto com a cápsula. Formatos aceitos: JPG, PNG.
+                </ThemedText>
               </View>
             </ThemedCard>
           </SlideInView>
@@ -260,16 +271,14 @@ const CreateCapsule = () => {
               variant="primary"
               size="large"
               disabled={isLoading}
-              style={styles.createButton}
-            />
+              style={styles.createButton} />
 
             <ThemedButton
               title="Cancelar"
               onPress={() => navigation.goBack()}
               variant="outline"
               size="medium"
-              disabled={isLoading}
-            />
+              disabled={isLoading} />
           </SlideInView>
 
           {isLoading && (
